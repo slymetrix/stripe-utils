@@ -1,0 +1,33 @@
+#!/bin/sh
+
+. ./lib.sh
+
+check_curl
+check_dasel
+
+times="$3"
+
+if [ -z "$times" ]; then
+    times=1
+fi
+
+if ! [ "$times" -eq "$times" ]; then
+    die "$times is not a number"
+fi
+
+if [ -t 1 ]; then
+    PRE_MESSAGE=""
+    POST_MESSAGE=": "
+else
+    PRE_MESSAGE=$'\r'
+    POST_MESSAGE=""
+fi
+
+for i in `seq 1 $times`; do
+    echo -n "${PRE_MESSAGE}${i}/${times}${POST_MESSAGE}" >&2
+    retry create_promotion_code "$1" "$2" -dmax_redemptions=1 | dasel -p json --plain -s 'code'
+done
+
+if ! [ -t 1 ]; then
+    echo
+fi
