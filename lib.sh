@@ -20,10 +20,15 @@ check_dasel() {
 STRIPE_BASE_URL="https://api.stripe.com/v1"
 
 stripe_request() {
-    local method="$1"
+    local method="$(echo -n "$1" | tr '[:lower:]' '[:upper:]')"
     local path="$2"
     local api_key="$3"
     shift 3
+
+    if [ "$method" = GET ]; then
+        set -- "$@" -G
+    fi
+
     local file="$(mktemp)"
     local code ret_code
     code="$(curl -sL -X"$method" --output "${file}" "${STRIPE_BASE_URL}/${path}" -u "${api_key}:" --write-out '%{http_code}' "$@")"
@@ -57,6 +62,10 @@ create_promotion_code() {
     local coupon="$2"
     shift 2
     stripe_request POST promotion_codes "${api_key}" -d"coupon=${coupon}" "$@"
+}
+
+list_promotion_codes() {
+    stripe_request GET promotion_codes "$@"
 }
 
 retry() {

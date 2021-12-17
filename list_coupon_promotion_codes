@@ -1,0 +1,35 @@
+#!/bin/sh
+
+. ./lib.sh
+
+check_curl
+check_dasel
+
+if [ -t 1 ]; then
+    PRE_MESSAGE=""
+    POST_MESSAGE=$'\n'
+else
+    PRE_MESSAGE=$'\r'
+    POST_MESSAGE=""
+fi
+
+last=
+total=0
+
+while true; do
+    if [ -z "$last" ]; then
+        json="$(list_promotion_codes "$1" -dlimit=100 -dcoupon="$2" || exit $?)"
+    else
+        json="$(list_promotion_codes "$1" -dlimit=100 -dcoupon="$2" -dstarting_after="$last" || exit $?)"
+    fi
+    codes="$(echo "$json" | dasel select -p json --plain -m -s '.data.(active=true).code')"
+    count="$(echo -n -- "$codes" | wc -l)"
+    total=$((total + count))
+    echo -n "${PRE_MESSAGE}${total}${POST_MESSAGE}" >&2
+    echo "$codes"
+    if [ "$(echo "$json" | dasel select -p json --plain -s '.has_more')" = true ]; then
+        last="$(echo "$json" | dasel select -p json --plain -m -s '.data.[*].id' | tail -n 1)"
+    else
+        break
+    fi
+done
